@@ -1,0 +1,17 @@
+# Executables
+*.exe
+*.out
+*.app
+
+# Folders
+/bin
+/.antlr
+
+# llvm files
+*.ll
+# assembly files
+*.s
+
+#Except
+!/scripts/windows/*.exe
+

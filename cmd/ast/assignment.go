@@ -9,8 +9,8 @@ type Assignment struct {
 	Value    Expression
 }
 
-func (node *Assignment) toString(tabLevel int) string {
+func (node *Assignment) ToString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
-	str := tabs + node.Variable.VarName + " = " + node.Value.toString(0)
+	str := tabs + node.Variable.VarName + " = " + node.Value.ToString(0)
 	return str
 }

@@ -8,7 +8,7 @@ type VariableReference struct {
 	VarName string
 }
 
-func (node *VariableReference) toString(tabLevel int) string {
+func (node *VariableReference) ToString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
 	str := tabs + node.VarName
 	return str

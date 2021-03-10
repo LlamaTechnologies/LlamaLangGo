@@ -10,12 +10,12 @@ type VariableDefinition struct {
 	AssignmentStatement *Assignment
 }
 
-func (node *VariableDefinition) toString(tabLevel int) string {
+func (node *VariableDefinition) ToString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
 	str := tabs + node.Name + ":" + node.VarType
 
 	if node.AssignmentStatement != nil {
-		str += node.AssignmentStatement.toString(0)
+		str += node.AssignmentStatement.ToString(0)
 	}
 
 	return str

@@ -58,16 +58,16 @@ type BinaryExpression struct {
 	Left   Expression
 }
 
-func (node *UnaryExpression) toString(tabLevel int) string {
+func (node *UnaryExpression) ToString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
 	exprName := unaryExprEnumNames[node.ExprID]
-	str := tabs + exprName + " " + node.Value.toString(0)
+	str := tabs + exprName + " " + node.Value.ToString(0)
 	return str
 }
 
 func (node *BinaryExpression) toString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
 	exprName := binaryExprEnumNames[node.ExprID]
-	str := tabs + exprName + " " + node.Left.toString(0) + ", " + node.Right.toString(0)
+	str := tabs + exprName + " " + node.Left.ToString(0) + ", " + node.Right.ToString(0)
 	return str
 }

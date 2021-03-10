@@ -19,7 +19,7 @@ type LiteralConstant struct {
 	Value      string
 }
 
-func (node *LiteralConstant) toString(tabLevel int) string {
+func (node *LiteralConstant) ToString(tabLevel int) string {
 	tabs := strings.Repeat("\t", tabLevel)
 	str := tabs + node.Value
 	return str

@@ -1,9 +1,5 @@
 package ast
 
-import (
-	"strings"
-)
-
 // Program is the ast node representing
 // the whole program
 type Program struct {
@@ -12,12 +8,14 @@ type Program struct {
 	Children []BaseNode
 }
 
-func (node *Program) toString(tabLevel int) string {
-	tabs := strings.Repeat("\t", tabLevel)
-	str := tabs + node.Name + ":"
+func (node *Program) ToString(tabLevel int) string {
+	tabs := GetTabs(tabLevel)
+	beginChar := GetLineBeginChar(tabLevel)
+
+	str := tabs + beginChar + " Program '" + node.Name + "':"
 
 	for _, child := range node.Children {
-		str += child.toString(tabLevel + 1)
+		str += child.ToString(tabLevel + 1)
 	}
 
 	return str

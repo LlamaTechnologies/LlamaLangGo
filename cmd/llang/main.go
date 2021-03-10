@@ -1,22 +1,29 @@
 package main
 
 import (
+	"LlamaLangCompiler/cmd/ast"
+	antlr4 "github.com/antlr/antlr4/runtime/Go/antlr"
+	"LlamaLangCompiler/cmd/antlr"
 	"LlamaLangCompiler/cmd/shared"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-const srcFileURL = "../../tests/test.llang"
+var separator = strings.Repeat("=", 96)
 
 /**
 * Main entry for the compiler
- */
+*/
 func main() {
 	fmt.Println("Starting...")
 
 	config := shared.Config{}
+	srcFileURL, _ :=  filepath.Abs("./examples/test.llang")
+
+	executableName := filepath.Base(srcFileURL)
 
 	// get command line arguments
 	args := os.Args[1:]
@@ -36,23 +43,56 @@ func main() {
 		panic(err)
 	}
 
+	strFile := string(srcFile)
+
 	// print source file
 	if config.IsVerbose {
+		fmt.Println(separator)
 		fmt.Println("Source file:")
-		srcLines := strings.Split(string(srcFile), "\n")
+		srcLines := strings.Split(strFile, "\n")
 		for _, line := range srcLines {
 			fmt.Println(">> " + line)
 		}
 	}
 
+	// input stream
+	srcInputStream := antlr4.NewInputStream(strFile)
+
 	// lexer
+	lexer := antlr.NewLlamaLangLexer(srcInputStream)
+
+	// TokenStream
+	tokenStream := antlr4.NewCommonTokenStream(lexer, antlr4.LexerDefaultTokenChannel)
+
 	// parser
+	parser := antlr.NewLlamaLangParser(tokenStream)
+	tree := parser.SourceFile()
+
 	// build ast
+	astBuilder := ast.AstBuilder{
+		Program: &ast.Program {
+			BaseNode: ast.BaseNode {
+				FileName: executableName,
+				LineNumber: 0,
+			},
+			Name: executableName,
+		},
+	}
+	astree := astBuilder.Visit(tree).(*ast.Program)
+
+	if config.IsVerbose {
+		fmt.Println(separator)
+		fmt.Println("Abstract Syntax Tree:")
+		fmt.Println(astree.ToString(0))
+	}
+
 	// check semantics
+
 	// print errors
 	// exit if errors
 	// ast -> IR
 	// call clang and compile IR
 
+	fmt.Println(separator)
 	fmt.Println("Finished compiling!")
 }

@@ -7,9 +7,13 @@ type LiteralTypeEnum int
 
 // LiteralTypeEnum values
 const (
-	NUMBER LiteralTypeEnum = iota
-	FLOAT                  = iota
-	STRING                 = iota
+	CONST_DEC    LiteralTypeEnum = iota
+	CONST_OCT                    = iota
+	CONST_HEX                    = iota
+	CONST_FLOAT                  = iota
+	CONST_DOUBLE                 = iota
+	CONST_CHAR                   = iota
+	CONST_STRING                 = iota
 )
 
 // LiteralConstant represents a literalConstant

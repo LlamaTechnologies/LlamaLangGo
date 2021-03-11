@@ -4,6 +4,7 @@ import (
 	"LlamaLangCompiler/cmd/antlr"
 	"LlamaLangCompiler/cmd/shared"
 	antlr4 "github.com/antlr/antlr4/runtime/Go/antlr"
+	"strings"
 )
 
 // AstBuilder builds the ast by using visitor pattern in the parsing tree
@@ -157,11 +158,97 @@ func (builder *AstBuilder) VisitExpression(ctx *antlr.ExpressionContext) interfa
 }
 
 func (builder *AstBuilder) VisitUnaryExpr(ctx *antlr.UnaryExprContext) interface{} {
-	return builder.VisitChildren(ctx)
+	childResult := builder.VisitChildren(ctx)
+
+	constantNode, isConstNode := childResult.(*LiteralConstant)
+	unaryOpCtx := ctx.UnaryOp().(*antlr.UnaryOpContext)
+
+	// Returns a negative or positive constant
+	if isConstNode {
+		if unaryOpCtx.MINUS() != nil {
+			constantNode.Value = "-" + constantNode.Value
+		}
+		return constantNode
+	}
+
+	// TODO: Returns a DECREMENT or INCREMENT expression
+	unaryExpr := new(UnaryExpression)
+
+	if unaryOpCtx.MINUS_MINUS() != nil {
+		unaryExpr.ExprID = DECREMENT
+	} else {
+		if unaryOpCtx.PLUS_PLUS() != nil {
+			unaryExpr.ExprID = INCREMENT
+		}
+	}
+
+	unaryExpr.Value = childResult.(*Expression)
+	return unaryExpr
 }
 
 func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{} {
-	return builder.VisitChildren(ctx)
+	constantNode := new(LiteralConstant)
+	constantNode.FileName = builder.Program.FileName
+	constantNode.LineNumber = ctx.GetStart().GetLine()
+
+	// Is a Integer number
+	if ctx.Integer() != nil {
+		text := ctx.Integer().GetText()
+		constantNode.Value = text
+
+		// is Hex
+		if strings.ToLower(string(text[1])) == "x" {
+			constantNode.ConstantID = CONST_HEX
+			return constantNode
+		}
+
+		// is Oct
+		if strings.ToLower(string(text[0])) == "0" {
+			constantNode.ConstantID = CONST_OCT
+			return constantNode
+		}
+
+		// Is Decimal
+		constantNode.ConstantID = CONST_DEC
+		return constantNode
+	}
+
+	// Is Floating Point number
+	if ctx.FloatingPoint() != nil {
+		text := ctx.FloatingPoint().GetText()
+		textSize := len(text)
+		if textSize < 1 {
+			constantNode.ConstantID = CONST_DOUBLE
+		}
+
+		indexOfLast := textSize - 1
+		fChar := string(text[indexOfLast])
+
+		if strings.ToLower(fChar) == "f" {
+			constantNode.ConstantID = CONST_FLOAT
+			// pop the F from the end
+			text = text[:indexOfLast]
+		}
+
+		constantNode.Value = text
+		return constantNode
+	}
+
+	// Is a Character
+	if ctx.RUNE_LIT() != nil {
+		constantNode.ConstantID = CONST_CHAR
+		constantNode.Value = ctx.String_().GetText()
+		return constantNode
+	}
+
+	// Is a string
+	if ctx.String_() != nil {
+		constantNode.ConstantID = CONST_STRING
+		constantNode.Value = ctx.String_().GetText()
+		return constantNode
+	}
+
+	return nil
 }
 
 func (builder *AstBuilder) VisitOperandName(ctx *antlr.OperandNameContext) interface{} {
@@ -174,6 +261,7 @@ func (builder *AstBuilder) VisitOperandName(ctx *antlr.OperandNameContext) inter
 }
 
 // PRIVATE FUNCTIONS
+
 func assignmentNodeConstruct(builder *AstBuilder, name string, epxressionList *antlr.ExpressionListContext) *Assignment {
 	assignmentNode := new(Assignment)
 	assignmentNode.Variable = VariableReference{

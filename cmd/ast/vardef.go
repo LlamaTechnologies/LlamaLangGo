@@ -4,7 +4,7 @@ import "strings"
 
 // VariableDefinition represents a variable definition in the code
 type VariableDefinition struct {
-	BaseNode
+	*BaseNode
 	Name                string
 	VarType             string
 	AssignmentStatement *Assignment

@@ -83,6 +83,26 @@ func (builder *AstBuilder) VisitFunctionDef(ctx *antlr.FunctionDefContext) inter
 	return astNode
 }
 
+func (builder *AstBuilder) VisitVarDef(ctx *antlr.VarDefContext) interface{} {
+	// variable definition
+	varDefNode := new(VariableDefinition)
+	varDefNode.FileName = builder.Program.FileName
+	varDefNode.LineNumber = ctx.GetStart().GetLine()
+	varDefNode.Name = ctx.IDENTIFIER().GetText()
+	varDefNode.VarType = ctx.Type_().GetText()
+
+	if ctx.ASSIGN() != nil {
+		expressionList := ctx.ExpressionList().(*antlr.ExpressionListContext)
+		assignmentNode := assignmentNodeConstruct(builder, varDefNode.Name, expressionList)
+		varDefNode.AssignmentStatement = assignmentNode
+	}
+
+	// Add symbol
+	builder.currentScope.AddSymbol(varDefNode.Name, varDefNode.BaseNode)
+
+	return varDefNode
+}
+
 func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interface{} {
 	var parameters []*VariableDefinition
 	for i := range ctx.GetChildren() {
@@ -110,7 +130,46 @@ func (builder *AstBuilder) VisitStatementList(ctx *antlr.StatementListContext) i
 	return block
 }
 
+func (builder *AstBuilder) VisitAssignment(ctx *antlr.AssignmentContext) interface{} {
+	expressionList := ctx.ExpressionList().(*antlr.ExpressionListContext)
+	varName := ctx.IDENTIFIER().GetText()
+	return assignmentNodeConstruct(builder, varName, expressionList)
+}
+
+func (builder *AstBuilder) VisitReturnStmt(ctx *antlr.ReturnStmtContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+
+func (builder *AstBuilder) VisitExpression(ctx *antlr.ExpressionContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+
+func (builder *AstBuilder) VisitUnaryExpr(ctx *antlr.UnaryExprContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+
+func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+
+func (builder *AstBuilder) VisitOperandName(ctx *antlr.OperandNameContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+
 // PRIVATE FUNCTIONS
+func assignmentNodeConstruct(builder *AstBuilder, name string, epxressionList *antlr.ExpressionListContext) *Assignment {
+	assignmentNode := new(Assignment)
+	assignmentNode.Variable = VariableReference{
+		VarName: name,
+	}
+	exprResult := builder.Visit(epxressionList)
+	exprNode, isExprNode := exprResult.(*Expression)
+	if isExprNode {
+		assignmentNode.Value = exprNode
+	}
+
+	return assignmentNode
+}
 
 func aggregateResult(result interface{}, nextResult interface{}) interface{} {
 	if result != nil && nextResult == nil {

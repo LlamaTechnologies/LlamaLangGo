@@ -9,7 +9,7 @@ const (
 
 // Scope represent a symbol table for a given scope
 type Scope struct {
-	Symbols   map[string][]*BaseNode
+	symbols   map[string][]*BaseNode
 	Children  []*Scope
 	Parent    *Scope
 	Data      *BaseNode
@@ -34,10 +34,14 @@ func (scope *Scope) FindSymbol(name string, justCurrent bool) *BaseNode {
 }
 
 func (scope *Scope) AddChildren(scopeType ScopeTypeEnum, name string, symbol *FunctionDefinition) *Scope {
-	scope.Symbols[name] = append(scope.Symbols[name], symbol.BaseNode)
+	scope.symbols[name] = append(scope.symbols[name], symbol.BaseNode)
 
 	childScope := NewScope(scopeType, symbol.BaseNode, scope)
 	scope.Children = append(scope.Children, childScope)
 
 	return childScope
+}
+
+func (scope *Scope) AddSymbol(name string, symbol *BaseNode) {
+	scope.symbols[name] = append(scope.symbols[name], symbol)
 }

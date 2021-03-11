@@ -6,7 +6,7 @@ import "strings"
 type Assignment struct {
 	BaseNode
 	Variable VariableReference
-	Value    Expression
+	Value    *Expression
 }
 
 func (node *Assignment) ToString(tabLevel int) string {

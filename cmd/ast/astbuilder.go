@@ -66,15 +66,35 @@ func (builder *AstBuilder) VisitFunctionDef(ctx *antlr.FunctionDefContext) inter
 	// Add function scope to parent scope and make it current
 	builder.currentScope = builder.currentScope.AddChildren(FUNCTION_SCOPE, astNode.Name, astNode)
 
-	// Get the result of the last child visited (block)
-	childResult := builder.VisitChildren(ctx)
+	// Get parameters
+	parametersResult := builder.Visit(ctx.Signature())
+	parameters, isParameters := parametersResult.([]*VariableDefinition)
+	if isParameters {
+		astNode.Parameters = parameters
+	}
 
+	// Get the result of the last child visited (block)
+	childResult := builder.Visit(ctx.Block())
 	block, isBlock := childResult.([]*BaseNode)
 	if isBlock {
 		astNode.Block = block
 	}
 
 	return astNode
+}
+
+func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interface{} {
+	var parameters []*VariableDefinition
+	for i := range ctx.GetChildren() {
+		paramCtx := ctx.ParameterDecl(i).(*antlr.ParameterDeclContext)
+		paramNode := new(VariableDefinition)
+		paramNode.FileName = builder.Program.FileName
+		paramNode.LineNumber = paramCtx.GetStart().GetLine()
+		paramNode.Name = paramCtx.IDENTIFIER().GetText()
+		paramNode.VarType = paramCtx.Type_().GetText()
+		parameters = append(parameters, paramNode)
+	}
+	return parameters
 }
 
 // PRIVATE FUNCTIONS

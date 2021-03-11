@@ -1,14 +1,15 @@
 package main
 
 import (
-	"LlamaLangCompiler/cmd/ast"
-	antlr4 "github.com/antlr/antlr4/runtime/Go/antlr"
 	"LlamaLangCompiler/cmd/antlr"
+	"LlamaLangCompiler/cmd/ast"
 	"LlamaLangCompiler/cmd/shared"
 	"fmt"
+	antlr4 "github.com/antlr/antlr4/runtime/Go/antlr"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -21,7 +22,9 @@ func main() {
 	fmt.Println("Starting...")
 
 	config := shared.Config{}
-	srcFileURL, _ :=  filepath.Abs("./examples/test.llang")
+	//srcFileURL, _ :=  filepath.Abs("./examples/test.llang")
+	srcFileURL, _ :=  filepath.Abs("./examples/test_syntax_errors.llang")
+	//srcFileURL, _ :=  filepath.Abs("./examples/test_semantic_errors.llang")
 
 	executableName := filepath.Base(srcFileURL)
 
@@ -65,7 +68,10 @@ func main() {
 	tokenStream := antlr4.NewCommonTokenStream(lexer, antlr4.LexerDefaultTokenChannel)
 
 	// parser
+	errorListener := CompilerErrorListener {}
 	parser := antlr.NewLlamaLangParser(tokenStream)
+	parser.RemoveErrorListeners()
+	parser.AddErrorListener(&errorListener)
 	tree := parser.SourceFile()
 
 	// build ast
@@ -77,6 +83,7 @@ func main() {
 			},
 			Name: executableName,
 		},
+		Errors: errorListener.Errors,
 	}
 	astree := astBuilder.Visit(tree).(*ast.Program)
 
@@ -87,6 +94,21 @@ func main() {
 	}
 
 	// check semantics
+
+	// print errors
+	errCount := len(astBuilder.Errors)
+	if errCount > 0 {
+		fmt.Println(separator)
+		fmt.Println(" Errors found (" + strconv.Itoa(errCount) + "):")
+		for _, err := range astBuilder.Errors {
+			errStr:= fmt.Errorf("%v\n", err)
+			fmt.Println(errStr.Error())
+		}
+
+		fmt.Println(separator)
+		fmt.Println("Finished with errors")
+		os.Exit(1)
+	}
 
 	// print errors
 	// exit if errors

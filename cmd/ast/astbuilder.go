@@ -97,6 +97,19 @@ func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interfa
 	return parameters
 }
 
+func (builder *AstBuilder) VisitStatementList(ctx *antlr.StatementListContext) interface{} {
+	var block []*BaseNode
+	for i := range ctx.GetChildren() {
+		stmntCtx := ctx.Statement(i).(*antlr.StatementContext)
+		stmntResult := builder.Visit(stmntCtx)
+		stmnt, isBaseNode := stmntResult.(*BaseNode)
+		if isBaseNode {
+			block = append(block, stmnt)
+		}
+	}
+	return block
+}
+
 // PRIVATE FUNCTIONS
 
 func aggregateResult(result interface{}, nextResult interface{}) interface{} {

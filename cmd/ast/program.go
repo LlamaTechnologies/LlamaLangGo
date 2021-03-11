@@ -5,7 +5,15 @@ package ast
 type Program struct {
 	BaseNode
 	Name     string
-	Children []BaseNode
+	Children []*BaseNode
+}
+
+func NewProgramNode(executableName string) *Program {
+	node := new(Program)
+	node.Name = executableName
+	node.FileName = node.Name
+	node.LineNumber = 0
+	return node
 }
 
 func (node *Program) ToString(tabLevel int) string {

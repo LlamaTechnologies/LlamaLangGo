@@ -17,13 +17,13 @@ var separator = strings.Repeat("=", 96)
 
 /**
 * Main entry for the compiler
-*/
+ */
 func main() {
 	fmt.Println("Starting...")
 
 	config := shared.Config{}
-	//srcFileURL, _ :=  filepath.Abs("./examples/test.llang")
-	srcFileURL, _ :=  filepath.Abs("./examples/test_syntax_errors.llang")
+	srcFileURL, _ := filepath.Abs("./examples/test.llang")
+	//srcFileURL, _ :=  filepath.Abs("./examples/test_syntax_errors.llang")
 	//srcFileURL, _ :=  filepath.Abs("./examples/test_semantic_errors.llang")
 
 	executableName := filepath.Base(srcFileURL)
@@ -68,7 +68,7 @@ func main() {
 	tokenStream := antlr4.NewCommonTokenStream(lexer, antlr4.LexerDefaultTokenChannel)
 
 	// parser
-	errorListener := CompilerErrorListener {}
+	errorListener := CompilerErrorListener{}
 	parser := antlr.NewLlamaLangParser(tokenStream)
 	parser.RemoveErrorListeners()
 	parser.AddErrorListener(&errorListener)
@@ -76,14 +76,9 @@ func main() {
 
 	// build ast
 	astBuilder := ast.AstBuilder{
-		Program: &ast.Program {
-			BaseNode: ast.BaseNode {
-				FileName: executableName,
-				LineNumber: 0,
-			},
-			Name: executableName,
-		},
-		Errors: errorListener.Errors,
+		Program:     ast.NewProgramNode(executableName),
+		GlobalScope: ast.NewScope(ast.GLOBAL_SCOPE, nil, nil),
+		Errors:      errorListener.Errors,
 	}
 	astree := astBuilder.Visit(tree).(*ast.Program)
 
@@ -101,7 +96,7 @@ func main() {
 		fmt.Println(separator)
 		fmt.Println(" Errors found (" + strconv.Itoa(errCount) + "):")
 		for _, err := range astBuilder.Errors {
-			errStr:= fmt.Errorf("%v\n", err)
+			errStr := fmt.Errorf("%v\n", err)
 			fmt.Println(errStr.Error())
 		}
 

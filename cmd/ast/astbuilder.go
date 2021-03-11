@@ -137,7 +137,19 @@ func (builder *AstBuilder) VisitAssignment(ctx *antlr.AssignmentContext) interfa
 }
 
 func (builder *AstBuilder) VisitReturnStmt(ctx *antlr.ReturnStmtContext) interface{} {
-	return builder.VisitChildren(ctx)
+	retStmnt := new(UnaryExpression)
+	retStmnt.ExprID = RETURN
+	retStmnt.FileName = builder.Program.FileName
+	retStmnt.LineNumber = ctx.GetStart().GetLine()
+
+	valueResult := builder.VisitChildren(ctx)
+
+	if valueResult != nil {
+		value := valueResult.(*Expression)
+		retStmnt.Value = value
+	}
+
+	return retStmnt
 }
 
 func (builder *AstBuilder) VisitExpression(ctx *antlr.ExpressionContext) interface{} {
@@ -153,7 +165,12 @@ func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{}
 }
 
 func (builder *AstBuilder) VisitOperandName(ctx *antlr.OperandNameContext) interface{} {
-	return builder.VisitChildren(ctx)
+	varName := ctx.IDENTIFIER().GetText()
+
+	varRefNode := new(VariableReference)
+	varRefNode.VarName = varName
+
+	return varRefNode
 }
 
 // PRIVATE FUNCTIONS

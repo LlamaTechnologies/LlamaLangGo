@@ -47,7 +47,7 @@ type Expression struct {
 type UnaryExpression struct {
 	Expression
 	ExprID UnaryExprEnum
-	Value  Expression
+	Value  *Expression
 }
 
 // BinaryExpression are those that have two operands

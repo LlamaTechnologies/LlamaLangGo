@@ -99,6 +99,7 @@ func (builder *AstBuilder) VisitVarDef(ctx *antlr.VarDefContext) interface{} {
 	if ctx.ASSIGN() != nil {
 		expressionList := ctx.ExpressionList().(*antlr.ExpressionListContext)
 		assignmentNode := assignmentNodeConstruct(builder, varDefNode.Name, expressionList, varDefNode.LineNumber, varDefNode.FileName)
+		assignmentNode.IsInitializer = true
 		varDefNode.AssignmentStatement = assignmentNode
 	}
 
@@ -117,6 +118,7 @@ func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interfa
 		}
 		paramCtx := interfaceCtx.(*antlr.ParameterDeclContext)
 		paramNode := new(VariableDefinition)
+		paramNode.IsParam = true
 		paramNode.FileName = builder.Program.FileName
 		paramNode.LineNumber = paramCtx.GetStart().GetLine()
 		paramNode.Name = paramCtx.IDENTIFIER().GetText()

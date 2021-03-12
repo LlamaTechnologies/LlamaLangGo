@@ -6,39 +6,23 @@ type VariableDefinition struct {
 	Name                string
 	VarType             string
 	IsGlobal            bool
+	IsParam             bool
 	AssignmentStatement *Assignment
 }
 
 func (node *VariableDefinition) ToString(tabLevel int) string {
 	tabs := GetTabs(tabLevel)
-	beginChar := GetLineBeginChar(tabLevel) + " "
+	beginChar := GetLineBeginChar() + " "
+	if node.IsParam {
+		beginChar = ""
+	}
 
-	str := node.putBeginChar(tabs, beginChar, "", true)
+	str := tabs + beginChar
 	str += node.Name + ": " + node.VarType
 
 	if node.AssignmentStatement != nil {
-		str += node.putBeginChar(tabs, beginChar, "\n", false)
+		str += "\n" + tabs + beginChar
 		str += node.AssignmentStatement.ToString(0)
-	}
-
-	return str
-}
-
-func (node *VariableDefinition) putBeginChar(tabs, beginChar, char string, putLast bool) string {
-	var str string
-
-	if !putLast {
-		str += char
-	}
-
-	str += tabs
-
-	if node.IsGlobal {
-		str += beginChar
-	}
-
-	if putLast {
-		str += char
 	}
 
 	return str

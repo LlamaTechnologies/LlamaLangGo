@@ -61,7 +61,7 @@ type BinaryExpression struct {
 }
 
 func (node *UnaryExpression) ToString(tabLevel int) string {
-	tabs := GetTabs(tabLevel)
+	tabs := GetTabs(tabLevel) + GetLineBeginChar() + " "
 	exprName := unaryExprEnumNames[node.ExprID]
 	str := tabs + exprName + " " + node.Value.ToString(0)
 	return str

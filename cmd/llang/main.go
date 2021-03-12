@@ -54,7 +54,7 @@ func main() {
 		fmt.Println("Source file:")
 		srcLines := strings.Split(strFile, "\n")
 		for _, line := range srcLines {
-			fmt.Println(">> " + line)
+			fmt.Println("> " + line)
 		}
 	}
 
@@ -86,6 +86,7 @@ func main() {
 	if config.IsVerbose {
 		fmt.Println(separator)
 		fmt.Println("Abstract Syntax Tree:")
+		fmt.Println("---------------------")
 		fmt.Println(astree.ToString(0))
 	}
 

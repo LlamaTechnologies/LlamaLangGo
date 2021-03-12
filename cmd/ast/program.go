@@ -20,7 +20,7 @@ func NewProgramNode(executableName string) *Program {
 
 func (node *Program) ToString(tabLevel int) string {
 	tabs := GetTabs(tabLevel)
-	beginChar := GetLineBeginChar(tabLevel)
+	beginChar := GetLineBeginChar()
 
 	str := tabs + beginChar + " Program '" + node.Name + "':"
 

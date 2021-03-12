@@ -10,7 +10,7 @@ type FunctionDefinition struct {
 
 func (node *FunctionDefinition) ToString(tabLevel int) string {
 	tabs := GetTabs(tabLevel)
-	beginChar := GetLineBeginChar(tabLevel) + " "
+	beginChar := GetLineBeginChar() + " "
 
 	str := tabs + beginChar + node.RetType + " :: "+ node.Name + " ("
 

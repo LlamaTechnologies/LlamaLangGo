@@ -23,12 +23,13 @@ func (builder *AstBuilder) Visit(tree antlr4.ParseTree) interface{} {
 func (builder *AstBuilder) VisitChildren(node antlr4.RuleNode) interface{} {
 	var result interface{}
 	for _, childTree := range node.GetChildren() {
-		child := childTree.(antlr4.RuleNode)
-		if !shouldVisitNextChild(child) {
+		if !shouldVisitNextChild(childTree) {
 			continue
 		}
+
+		child := childTree.(antlr4.RuleNode)
 		childResult := child.Accept(builder)
-		aggregateResult(result, childResult)
+		result = aggregateResult(result, childResult)
 	}
 
 	return result
@@ -40,6 +41,8 @@ func (builder *AstBuilder) VisitErrorNode(errorNode antlr4.ErrorNode) interface{
 	return nil
 }
 
+//===================== AST Builder ====================================================================================
+
 func (builder *AstBuilder) VisitSourceFile(ctx *antlr.SourceFileContext) interface{} {
 	// set GlobalScope as the current scope
 	builder.currentScope = builder.GlobalScope
@@ -49,7 +52,7 @@ func (builder *AstBuilder) VisitSourceFile(ctx *antlr.SourceFileContext) interfa
 		child := childTree.(antlr4.RuleNode)
 		result := builder.Visit(child)
 		if result != nil {
-			astNode := result.(*BaseNode)
+			astNode := result.(Node)
 			builder.Program.Children = append(builder.Program.Children, astNode)
 		}
 	}
@@ -76,7 +79,7 @@ func (builder *AstBuilder) VisitFunctionDef(ctx *antlr.FunctionDefContext) inter
 
 	// Get the result of the last child visited (block)
 	childResult := builder.Visit(ctx.Block())
-	block, isBlock := childResult.([]*BaseNode)
+	block, isBlock := childResult.([]Node)
 	if isBlock {
 		astNode.Block = block
 	}
@@ -91,15 +94,16 @@ func (builder *AstBuilder) VisitVarDef(ctx *antlr.VarDefContext) interface{} {
 	varDefNode.LineNumber = ctx.GetStart().GetLine()
 	varDefNode.Name = ctx.IDENTIFIER().GetText()
 	varDefNode.VarType = ctx.Type_().GetText()
+	varDefNode.IsGlobal = builder.currentScope == builder.GlobalScope
 
 	if ctx.ASSIGN() != nil {
 		expressionList := ctx.ExpressionList().(*antlr.ExpressionListContext)
-		assignmentNode := assignmentNodeConstruct(builder, varDefNode.Name, expressionList)
+		assignmentNode := assignmentNodeConstruct(builder, varDefNode.Name, expressionList, varDefNode.LineNumber, varDefNode.FileName)
 		varDefNode.AssignmentStatement = assignmentNode
 	}
 
 	// Add symbol
-	builder.currentScope.AddSymbol(varDefNode.Name, varDefNode.BaseNode)
+	builder.currentScope.AddSymbol(varDefNode.Name, varDefNode)
 
 	return varDefNode
 }
@@ -107,7 +111,11 @@ func (builder *AstBuilder) VisitVarDef(ctx *antlr.VarDefContext) interface{} {
 func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interface{} {
 	var parameters []*VariableDefinition
 	for i := range ctx.GetChildren() {
-		paramCtx := ctx.ParameterDecl(i).(*antlr.ParameterDeclContext)
+		interfaceCtx := ctx.ParameterDecl(i)
+		if interfaceCtx == nil {
+			break
+		}
+		paramCtx := interfaceCtx.(*antlr.ParameterDeclContext)
 		paramNode := new(VariableDefinition)
 		paramNode.FileName = builder.Program.FileName
 		paramNode.LineNumber = paramCtx.GetStart().GetLine()
@@ -119,11 +127,15 @@ func (builder *AstBuilder) VisitParameters(ctx *antlr.ParametersContext) interfa
 }
 
 func (builder *AstBuilder) VisitStatementList(ctx *antlr.StatementListContext) interface{} {
-	var block []*BaseNode
+	var block []Node
 	for i := range ctx.GetChildren() {
-		stmntCtx := ctx.Statement(i).(*antlr.StatementContext)
+		stmntCtx, ok := ctx.Statement(i).(*antlr.StatementContext)
+		if !ok {
+			break
+		}
+
 		stmntResult := builder.Visit(stmntCtx)
-		stmnt, isBaseNode := stmntResult.(*BaseNode)
+		stmnt, isBaseNode := stmntResult.(Node)
 		if isBaseNode {
 			block = append(block, stmnt)
 		}
@@ -134,7 +146,7 @@ func (builder *AstBuilder) VisitStatementList(ctx *antlr.StatementListContext) i
 func (builder *AstBuilder) VisitAssignment(ctx *antlr.AssignmentContext) interface{} {
 	expressionList := ctx.ExpressionList().(*antlr.ExpressionListContext)
 	varName := ctx.IDENTIFIER().GetText()
-	return assignmentNodeConstruct(builder, varName, expressionList)
+	return assignmentNodeConstruct(builder, varName, expressionList, ctx.GetStart().GetLine(), builder.Program.FileName)
 }
 
 func (builder *AstBuilder) VisitReturnStmt(ctx *antlr.ReturnStmtContext) interface{} {
@@ -146,7 +158,7 @@ func (builder *AstBuilder) VisitReturnStmt(ctx *antlr.ReturnStmtContext) interfa
 	valueResult := builder.VisitChildren(ctx)
 
 	if valueResult != nil {
-		value := valueResult.(*Expression)
+		value := valueResult.(Node)
 		retStmnt.Value = value
 	}
 
@@ -154,6 +166,51 @@ func (builder *AstBuilder) VisitReturnStmt(ctx *antlr.ReturnStmtContext) interfa
 }
 
 func (builder *AstBuilder) VisitExpression(ctx *antlr.ExpressionContext) interface{} {
+	// is binary expr
+	if ctx.GetRight() != nil && ctx.GetLeft() != nil {
+		rightExpr := builder.Visit(ctx.GetRight())
+		leftExpr := builder.Visit(ctx.GetLeft())
+
+		if rightExpr == nil || leftExpr == nil {
+			return nil
+		}
+
+		binExprNode := new(BinaryExpression)
+		binExprNode.FileName = builder.Program.FileName
+		binExprNode.LineNumber = ctx.GetStart().GetLine()
+		binExprNode.Right = rightExpr.(*Expression)
+		binExprNode.Left = leftExpr.(*Expression)
+
+		// ADD EXPRESSION
+		if ctx.PLUS() != nil {
+			binExprNode.ExprID = BINEXPR_ADD
+		}
+
+		// SUB EXPRESSION
+		if ctx.MINUS() != nil {
+			binExprNode.ExprID = BINEXPR_SUB
+		}
+
+		// MUL EXPRESSION
+		if ctx.STAR() != nil {
+			binExprNode.ExprID = BINEXPR_MUL
+		}
+
+		// DIV EXPRESSION
+		if ctx.DIV() != nil {
+			binExprNode.ExprID = BINEXPR_DIV
+		}
+
+		// MOD EXPRESSION
+		if ctx.MOD() != nil {
+			binExprNode.ExprID = BINEXPR_MOD
+		}
+
+		return binExprNode
+	}
+
+	// Is (unary | primary) expression
+	// ConstantNode | UnaryOperationNode
 	return builder.VisitChildren(ctx)
 }
 
@@ -197,7 +254,7 @@ func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{}
 		constantNode.Value = text
 
 		// is Hex
-		if strings.ToLower(string(text[1])) == "x" {
+		if len(text) > 1 && strings.ToLower(string(text[1])) == "x" {
 			constantNode.ConstantID = CONST_HEX
 			return constantNode
 		}
@@ -217,7 +274,7 @@ func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{}
 	if ctx.FloatingPoint() != nil {
 		text := ctx.FloatingPoint().GetText()
 		textSize := len(text)
-		if textSize < 1 {
+		if textSize <= 2 {
 			constantNode.ConstantID = CONST_DOUBLE
 		}
 
@@ -253,23 +310,48 @@ func (builder *AstBuilder) VisitBasicLit(ctx *antlr.BasicLitContext) interface{}
 
 func (builder *AstBuilder) VisitOperandName(ctx *antlr.OperandNameContext) interface{} {
 	varName := ctx.IDENTIFIER().GetText()
-
-	varRefNode := new(VariableReference)
-	varRefNode.VarName = varName
-
+	varRefNode := NewVariableReference(varName)
+	varRefNode.FileName = builder.Program.FileName
+	varRefNode.LineNumber = ctx.GetStart().GetLine()
 	return varRefNode
 }
 
+// OVERRIDDEN FUNCTIONS TO JUST VISIT CHILDREN
+
+func (builder *AstBuilder) VisitSignature(ctx *antlr.SignatureContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitBlock(ctx *antlr.BlockContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitStatement(ctx *antlr.StatementContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitSimpleStmt(ctx *antlr.SimpleStmtContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitExpressionList(ctx *antlr.ExpressionListContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitPrimaryExpr(ctx *antlr.PrimaryExprContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitOperand(ctx *antlr.OperandContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
+func (builder *AstBuilder) VisitLiteral(ctx *antlr.LiteralContext) interface{} {
+	return builder.VisitChildren(ctx)
+}
 // PRIVATE FUNCTIONS
 
-func assignmentNodeConstruct(builder *AstBuilder, name string, epxressionList *antlr.ExpressionListContext) *Assignment {
-	assignmentNode := new(Assignment)
-	assignmentNode.Variable = VariableReference{
-		VarName: name,
-	}
-	exprResult := builder.Visit(epxressionList)
-	exprNode, isExprNode := exprResult.(*Expression)
-	if isExprNode {
+func assignmentNodeConstruct(builder *AstBuilder, name string, expressionList *antlr.ExpressionListContext, lineNumber int, fileName string) *Assignment {
+	assignmentNode := NewAssignmentNode(name)
+	assignmentNode.FileName = fileName
+	assignmentNode.LineNumber = lineNumber
+
+	exprResult := builder.Visit(expressionList)
+	exprNode, isNode := exprResult.(Node)
+	if isNode {
 		assignmentNode.Value = exprNode
 	}
 
@@ -283,21 +365,6 @@ func aggregateResult(result interface{}, nextResult interface{}) interface{} {
 	return nextResult
 }
 
-func shouldVisitNextChild(node antlr4.ParseTree) bool {
-	_, ok := interface{}(node).(antlr4.TerminalNode)
-	if !ok {
-		return false
-	}
-
-	_, ok = interface{}(node).(antlr4.ErrorNode)
-	if !ok {
-		return false
-	}
-
-	ctx, ok := interface{}(node).(antlr4.RuleNode)
-	if ok && ctx.GetChildCount() > 0 {
-		return true
-	}
-
-	return false
+func shouldVisitNextChild(node antlr4.Tree) bool {
+	return node.GetChildCount() > 0
 }

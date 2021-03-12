@@ -1,7 +1,5 @@
 package ast
 
-import "strings"
-
 // LiteralTypeEnum enumType
 type LiteralTypeEnum int
 
@@ -24,7 +22,7 @@ type LiteralConstant struct {
 }
 
 func (node *LiteralConstant) ToString(tabLevel int) string {
-	tabs := strings.Repeat("\t", tabLevel)
+	tabs := GetTabs(tabLevel)
 	str := tabs + node.Value
 	return str
 }

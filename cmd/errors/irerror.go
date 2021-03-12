@@ -1,9 +1,5 @@
 package errors
 
-type IrError struct {
-	message string
-}
+import "errors"
 
-func (err *IrError) Error() string {
-	return err.message
-}
+var IrError = errors.New("intermediate representation code generation error")

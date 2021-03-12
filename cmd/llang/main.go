@@ -80,6 +80,7 @@ func main() {
 		GlobalScope: ast.NewScope(ast.GLOBAL_SCOPE, nil, nil),
 		Errors:      errorListener.Errors,
 	}
+	astBuilder.BaseParseTreeVisitor = new(antlr4.BaseParseTreeVisitor)
 	astree := astBuilder.Visit(tree).(*ast.Program)
 
 	if config.IsVerbose {

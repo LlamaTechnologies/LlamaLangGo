@@ -1,18 +1,18 @@
 package ast
 
 type FunctionDefinition struct {
-	*BaseNode
+	BaseNode
 	Name       string
 	RetType    string
 	Parameters []*VariableDefinition
-	Block      []*BaseNode
+	Block      []Node
 }
 
 func (node *FunctionDefinition) ToString(tabLevel int) string {
 	tabs := GetTabs(tabLevel)
-	beginChar := GetLineBeginChar(tabLevel)
+	beginChar := GetLineBeginChar(tabLevel) + " "
 
-	str := tabs + beginChar + " func " + node.Name + ": " + node.RetType + "{"
+	str := tabs + beginChar + node.RetType + " :: "+ node.Name + " ("
 
 	childLevelType := tabLevel + 1
 	if len(node.Parameters) > 0 {

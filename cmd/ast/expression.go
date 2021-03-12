@@ -1,7 +1,5 @@
 package ast
 
-import "strings"
-
 // UnaryExprEnum enumType
 type UnaryExprEnum int
 
@@ -23,19 +21,19 @@ type BinaryExprEnum int
 
 // BINARY_EXPR enum values
 const (
-	ADD BinaryExprEnum = iota
-	SUB                = iota
-	MUL                = iota
-	DIV                = iota
-	MOD                = iota
+	BINEXPR_ADD BinaryExprEnum = iota
+	BINEXPR_SUB                = iota
+	BINEXPR_MUL                = iota
+	BINEXPR_DIV                = iota
+	BINEXPR_MOD                = iota
 )
 
 var binaryExprEnumNames = map[BinaryExprEnum]string{
-	ADD: "ADD",
-	SUB: "SUB",
-	MUL: "MUL",
-	DIV: "DIV",
-	MOD: "MOD",
+	BINEXPR_ADD: "ADD",
+	BINEXPR_SUB: "SUB",
+	BINEXPR_MUL: "MUL",
+	BINEXPR_DIV: "DIV",
+	BINEXPR_MOD: "MOD",
 }
 
 // Expression is the base node to represent expressions
@@ -43,30 +41,34 @@ type Expression struct {
 	BaseNode
 }
 
+func (node *Expression) ToString(_ int) string {
+	return ""
+}
+
 // UnaryExpression are those that have only one operand
 type UnaryExpression struct {
 	Expression
 	ExprID UnaryExprEnum
-	Value  *Expression
+	Value  Node
 }
 
 // BinaryExpression are those that have two operands
 type BinaryExpression struct {
 	Expression
 	ExprID BinaryExprEnum
-	Right  Expression
-	Left   Expression
+	Right  Node
+	Left   Node
 }
 
 func (node *UnaryExpression) ToString(tabLevel int) string {
-	tabs := strings.Repeat("\t", tabLevel)
+	tabs := GetTabs(tabLevel)
 	exprName := unaryExprEnumNames[node.ExprID]
 	str := tabs + exprName + " " + node.Value.ToString(0)
 	return str
 }
 
 func (node *BinaryExpression) toString(tabLevel int) string {
-	tabs := strings.Repeat("\t", tabLevel)
+	tabs := GetTabs(tabLevel)
 	exprName := binaryExprEnumNames[node.ExprID]
 	str := tabs + exprName + " " + node.Left.ToString(0) + ", " + node.Right.ToString(0)
 	return str
